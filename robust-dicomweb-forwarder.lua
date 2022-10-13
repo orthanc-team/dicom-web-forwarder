@@ -74,8 +74,7 @@ function OnJobSuccess(jobId)
   
     if job["Type"] == "DicomWebStowClient" then
         
-        -- TODO: replace following line by something working with the new version of the DICOMweb plugin (see WO-27 in Jira)
-        local instanceId = job["Content"]["ParentResources"][1]
+        local instanceId = job["Content"]["Resources"]["Instances"][1]
   
         -- delete instance once it has been transmitted to target
         RestApiDelete("/instances/" .. instanceId)
