@@ -1,0 +1,50 @@
+name: build-dicomweb-forwarder
+
+on:
+  push:
+    branches:
+      - '*'
+    tags:
+      - '*'
+
+jobs:
+
+  build-dicomweb-forwarder:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker (orthanc-dicomweb-forwarder)
+        id: meta-orthanc-dicomweb-forwarder
+        uses: docker/metadata-action@98669ae865ea3cffbcbaa878cf57c20bbf1c6c38
+        with:
+          images: orthancteam/orthanc-dicomweb-forwarder
+          labels: |
+            org.opencontainers.image.title=orthanc-dicomweb-forwarder
+            org.opencontainers.image.vendor=Orthanc Team SRL
+
+      - name: Build and push orthanc-dicomweb-forwarder Docker image
+        uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta-orthanc-dicomweb-forwarder.outputs.tags }}
+          labels: ${{ steps.meta-orthanc-dicomweb-forwarder.outputs.labels }}
+
+      - name: Docker Hub Description (orthanc-dicomweb-forwarder)
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+          repository: orthancteam/orthanc-dicomweb-forwarder
+          short-description: A regular Orthanc embedding a lua script which will forward every incoming instance and delete it afterwards.
+          readme-filepath: README.md
