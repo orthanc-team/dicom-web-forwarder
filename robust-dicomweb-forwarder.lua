@@ -1,4 +1,4 @@
--- This script implements a robust forwarder in lua.
+-- This script implements a robust (but slow) forwarder in lua.
 -- It aims is to forward each instance and delete it afterwards.
 -- If it is interrupted, at startup, it will try to resend every instance currently stored in Orthanc.
 -- When a job fails because of a network issue when forwarding, it will retry the job immediately.
@@ -9,7 +9,6 @@ function ForwardInstance(instanceId)
     payload["Resources"] = {}
     table.insert(payload["Resources"], instanceId)
     payload["Synchronous"] = false
-    -- TODO: we could make the name of the dicom web server (here 'destination') as a param (read env var, get the first of the list,...)
     local job = ParseJson(RestApiPost("/dicom-web/servers/destination/stow", DumpJson(payload, true)))
     print("created job " .. job["ID"] .. " to transfer instance " .. instanceId)
   
@@ -17,6 +16,16 @@ end
   
   -- method called by Orthanc at startup
 function Initialize()
+
+    -- get the dicomweb destination params from the env var
+    local url = os.getenv("DESTINATION_URL")
+    local user = os.getenv("DESTINATION_USER")
+    local password = os.getenv("DESTINATION_PASSWORD")
+    
+    -- configure the dicomweb destination in Orthanc
+    local body = '{"Url":"' .. url .. '","Username":"' .. user .. '","Password":"' .. password .. '"}'
+    RestApiPut("/dicom-web/servers/destination", body, false)
+
     -- try to forward everything that is already in Orthanc at startup
     print("-------------- starting forwarder script")
     local allInstancesIds = ParseJson(RestApiGet("/instances"))
