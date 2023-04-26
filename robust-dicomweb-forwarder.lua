@@ -18,13 +18,17 @@ end
 function Initialize()
 
     -- get the dicomweb destination params from the env var
-    local url = os.getenv("DESTINATION_URL")
-    local user = os.getenv("DESTINATION_USER")
-    local password = os.getenv("DESTINATION_PASSWORD")
+    urlDestination = os.getenv("DESTINATION_URL")
+    userDestination = os.getenv("DESTINATION_USER")
+    passwordDestination = os.getenv("DESTINATION_PASSWORD")
+    labelToApply = os.getenv("DESTINATION_LABEL")
     
     -- configure the dicomweb destination in Orthanc
-    local body = '{"Url":"' .. url .. '","Username":"' .. user .. '","Password":"' .. password .. '"}'
+    local body = '{"Url":"' .. urlDestination .. '","Username":"' .. userDestination .. '","Password":"' .. passwordDestination .. '"}'
     RestApiPut("/dicom-web/servers/destination", body, false)
+
+    -- prepare urlDestination for calls to api
+    urlDestination = string.gsub(urlDestination, "/dicom%-web", "")
 
     -- try to forward everything that is already in Orthanc at startup
     print("-------------- starting forwarder script")
@@ -34,16 +38,25 @@ function Initialize()
         ForwardInstance(instanceId)
     end
   
+    index = 1
     print("-------------- forwarder script started")
   
 end
   
-  
+urlDestination = ""
+userDestination = ""
+passwordDestination = ""
+labelToApply = ""
+
+labeledStudyInstanceUIDs = {}
+index = 1
+tableSize = 10
+
 function OnStoredInstance(instanceId, tags, metadata)
     -- everytime a new instance is received in Orthanc, forward it
   
-    ForwardInstance(instanceId)
-  
+    ForwardInstance(instanceId)    
+
 end
   
   
@@ -73,6 +86,7 @@ function OnJobFailure(jobId)
     end
   
 end
+
   
 function OnJobSuccess(jobId)
   
@@ -85,8 +99,91 @@ function OnJobSuccess(jobId)
         
         local instanceId = job["Content"]["Resources"]["Instances"][1]
   
+        if labelToApply ~= "" then
+            -- get studyInstanceUID (we do it here because the script should work when it starts with an already filled Orthanc)
+            local studyInstanceUID = GetStudyInstanceUID(instanceId)
+            
+            -- check if studyInstanceUID has already been processed
+            if not StudyAlreadyLabeled(studyInstanceUID) then
+
+                -- get the remote Orthanc ID
+                local orthancId = GetRemoteStudyId(studyInstanceUID)
+
+                -- apply the label
+                ApplyLabel(orthancId, labelToApply)
+
+                -- mark it as labeled
+                MarkStudyInstanceUIDAsLabeled(studyInstanceUID)
+            end
+        end
+
         -- delete instance once it has been transmitted to target
         RestApiDelete("/instances/" .. instanceId)
     end
   
+end
+
+function GetStudyInstanceUID(instanceId)
+    -- retrieve the Study instance UID based on the orthanc ID of a instance
+    local seriesId = GetParentSeriesId(instanceId)
+    local studyId = GetParentStudyId(seriesId)
+    return ParseJson(RestApiGet("/studies/" .. studyId))["MainDicomTags"]["StudyInstanceUID"]
+end
+
+function GetParentSeriesId(instanceId)
+   return ParseJson(RestApiGet("/instances/" .. instanceId))["ParentSeries"]
+end
+
+function GetParentStudyId(seriesId)
+    return ParseJson(RestApiGet("/series/" .. seriesId))["ParentStudy"]
+end
+
+function StudyAlreadyLabeled(studyInstanceUID)
+    -- returns true if the study has already been labeled
+    -- (i.e the studyinstanceUID is in the table)
+    for i,id in ipairs(labeledStudyInstanceUIDs) do
+        if id == studyInstanceUID then
+            -- already processed
+            return true
+        end
+    end
+    return false
+end
+
+function GetRemoteStudyId(studyInstanceUID)
+    -- gets the orthanc study id from the destination Orthanc
+    SetHttpCredentials(userDestination, passwordDestination)
+    SetHttpTimeout(1)
+    local headers = {["content-type"] = "application/json",}
+    local response = HttpPost(urlDestination .. "/tools/lookup", studyInstanceUID, headers)
+    
+    -- print(ParseJson(response)[1]["ID"])
+    return ParseJson(response)[1]["ID"]
+end
+
+function ApplyLabel(orthancId, label)
+    -- call the API route to apply the label to the study in the distant Orthanc
+    SetHttpCredentials(userDestination, passwordDestination)
+    SetHttpTimeout(1)
+        
+    HttpPut(urlDestination .. "/studies/" .. orthancId .. "/labels/" .. label, "")
+end
+
+function MarkStudyInstanceUIDAsLabeled(studyInstanceUID)
+    -- insert the studyInstanceUID in the table,
+    -- the table being a kind of circular buffer
+
+    -- first filling of the table:
+    if #labeledStudyInstanceUIDs ~= 10 then
+        table.insert(labeledStudyInstanceUIDs, studyInstanceUID)
+        index = #labeledStudyInstanceUIDs
+    -- as soon as there are 10 elements, we have to recycle:
+    else
+        index = index + 1
+        if index > 10 then
+            index = 1
+        end
+        table.remove(labeledStudyInstanceUIDs, index)
+        table.insert(labeledStudyInstanceUIDs, index, studyInstanceUID)
+    end
 end

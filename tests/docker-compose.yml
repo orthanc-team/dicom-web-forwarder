@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  orthanc:
+    build: ..
+    ports: ["8042:8042"]
+    volumes: ["orthanc:/var/lib/orthanc/db"]
+    restart: unless-stopped
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__DICOM_AET: "ORTHANCFORWARDER"
+      DESTINATION_URL: "http://orthanc-destination:8042/dicom-web"
+      DESTINATION_USER: "demo"
+      DESTINATION_PASSWORD: "demo"
+      DESTINATION_LABEL: "MYLABEL"
+      VERBOSE_ENABLED: "true"
+
+  orthanc-destination:
+    image: osimis/orthanc:23.4.0
+    ports: ["8043:8042"]
+    volumes: ["orthanc-destination:/var/lib/orthanc/db"]
+    restart: unless-stopped
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__DICOM_AET: "DESTINATION"
+      VERBOSE_ENABLED: "true"
+      ORTHANC_JSON: |
+        {
+          "RegisteredUsers" : {
+            "demo" : "demo"
+          },
+          "DicomWeb" : {
+              "Enable" : true
+          }
+        }
+
+
+volumes:
+  orthanc:
+  orthanc-destination:
