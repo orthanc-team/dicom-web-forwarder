@@ -15,7 +15,7 @@ services:
       VERBOSE_ENABLED: "true"
 
   orthanc-destination:
-    image: osimis/orthanc:23.4.0
+    image: orthancteam/orthanc:24.3.4
     ports: ["10043:8042"]
     restart: unless-stopped
     environment:
