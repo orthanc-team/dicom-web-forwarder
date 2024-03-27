@@ -5,7 +5,7 @@ It is also able to apply a label on the remote study if the destination is also 
 
 ## How it works?
 
-Deeply inspired from: [https://bitbucket.org/osimis/orthanc-setup-samples/src/master/lua-samples/robust-forwarder.lua](https://bitbucket.org/osimis/orthanc-setup-samples/src/master/lua-samples/robust-forwarder.lua)
+Deeply inspired from this [lua script](https://github.com/orthanc-server/orthanc-setup-samples/blob/master/lua-samples/robust-forwarder.lua)
 
 The lua script will forward each incoming instance (through DicomWeb) and delete it afterwards.
 If it is interrupted, at startup, it will try to resend every instance currently stored in Orthanc.
