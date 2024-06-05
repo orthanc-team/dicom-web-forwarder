@@ -1,0 +1,129 @@
+version: "3.8"
+
+services:
+  orthanc-source:
+    build: ..
+    ports: ["10042:8042"]
+    restart: unless-stopped
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__DICOM_AET: "ORTHANCFORWARDER"
+      DESTINATION_URL: "http://nginx/orthanc/dicom-web"
+      DESTINATION_API_KEY: "forwarder-api-key"
+      DESTINATION_LABEL: "MYLABEL"
+      VERBOSE_ENABLED: "true"
+
+  nginx:
+    image: orthancteam/orthanc-nginx:24.5.1
+    depends_on: [orthanc, orthanc-auth-service, keycloak]
+    restart: unless-stopped
+    ports: ["80:80"]
+    environment:
+      ENABLE_ORTHANC: "true"
+      ENABLE_KEYCLOAK: "true"
+      ENABLE_ORTHANC_TOKEN_SERVICE: "false"
+      ENABLE_HTTPS: "false"
+
+  # orthanc-destination
+  orthanc:
+    image: orthancteam/orthanc:24.5.1
+    restart: unless-stopped
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "false"
+      ORTHANC__POSTGRESQL__HOST: "orthanc-db"
+      ORTHANC__POSTGRESQL__ENABLE_STORAGE: "true"
+      ORTHANC__DATABASE_SERVER_IDENTIFIER: "orthanc1"
+      ORTHANC__DICOM_AET: "DESTINATION"
+      VERBOSE_ENABLED: "true"
+      ORTHANC_JSON: |
+        {
+          "DicomWeb" : {
+              "Enable" : true,
+              "PublicRoot": "/orthanc/dicom-web/"
+          },
+          "OrthancExplorer2": {
+            "Keycloak" : {
+              "Enable": true,
+              "Url": "http://localhost/keycloak/",
+              "Realm": "orthanc",
+              "ClientId": "orthanc"
+            }
+          },
+          "Authorization": {
+            "WebServiceRootUrl": "http://orthanc-auth-service:8000/",
+            "WebServiceUsername": "share-user",
+            "WebServicePassword": "change-me",
+            "StandardConfigurations" : [
+                "stone-webviewer",
+                "orthanc-explorer-2"
+            ],
+            "CheckedLevel": "studies",
+            "TokenHttpHeaders" : [ "api-key" ]
+          }
+        }
+
+  orthanc-destination-2:
+    image: orthancteam/orthanc:24.5.1
+    ports: ["10043:8042"]
+    restart: unless-stopped
+    environment:
+      ORTHANC__AUTHENTICATION_ENABLED: "true"
+      ORTHANC__POSTGRESQL__HOST: "orthanc-db"
+      ORTHANC__POSTGRESQL__ENABLE_STORAGE: "true"
+      ORTHANC__DATABASE_SERVER_IDENTIFIER: "orthanc2"
+      ORTHANC__DICOM_AET: "DESTINATION"
+      VERBOSE_ENABLED: "true"
+      ORTHANC_JSON: |
+        {
+          "RegisteredUsers" : {
+            "demo" : "demo"
+          },
+          "DicomWeb" : {
+              "Enable" : true
+          }
+        }
+
+  orthanc-db:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: "trust"
+
+  orthanc-auth-service:
+    image: orthancteam/orthanc-auth-service:24.5.1
+    depends_on: [keycloak]
+    restart: unless-stopped
+    environment:
+      ENABLE_KEYCLOAK: "true"
+      ENABLE_KEYCLOAK_API_KEYS: "true"
+      KEYCLOAK_CLIENT_SECRET: "sVh1itTUBXQ5YMKiYHYDoPcO1l1HbAnU"
+      PUBLIC_ORTHANC_ROOT: "http://localhost/orthanc/"
+      PUBLIC_LANDING_ROOT: "http://localhost/orthanc/ui/app/token-landing.html"
+      PERMISSIONS_FILE_PATH: "/orthanc_auth_service/permissions.json"
+      SECRET_KEY: "change-me-I-am-a-secret-key"
+      USERS: |
+        {
+          "share-user": "change-me"
+        }
+    volumes:
+      - ./permissions.json:/orthanc_auth_service/permissions.json
+
+  keycloak:
+    image: orthancteam/orthanc-keycloak:24.5.1
+    depends_on: [keycloak-db]
+    restart: unless-stopped
+    environment:
+      KEYCLOAK_ADMIN: "admin"
+      KEYCLOAK_ADMIN_PASSWORD: "change-me"
+      KC_DB: "postgres"
+      KC_DB_URL: "jdbc:postgresql://keycloak-db:5432/keycloak"
+      KC_DB_USERNAME: "keycloak"
+      KC_DB_PASSWORD: "keycloak"
+
+  keycloak-db:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: "keycloak"
+      POSTGRES_USER: "keycloak"
+      POSTGRES_DB: "keycloak"

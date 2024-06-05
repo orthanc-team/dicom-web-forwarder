@@ -1,4 +1,4 @@
-FROM orthancteam/orthanc:24.3.4
+FROM orthancteam/orthanc:24.5.1
 
 COPY robust-dicomweb-forwarder.lua /scripts/
 

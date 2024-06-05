@@ -1,0 +1,2 @@
+orthanc-api-client>=0.15.1
+orthanc_tools>=0.12.9

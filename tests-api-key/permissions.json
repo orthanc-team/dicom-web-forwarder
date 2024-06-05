@@ -1,0 +1,16 @@
+{
+  "roles" : {
+    "admin-role": {
+      "permissions": ["all"],
+      "authorized_labels": ["*"]
+    },
+    "doctor-role": {
+      "permissions":["view", "download", "share", "send"],
+      "authorized_labels": ["*"]
+    },
+    "upload-role": {
+      "permissions":["upload", "edit-labels"],
+      "authorized_labels": ["*"]
+    }
+  }
+}

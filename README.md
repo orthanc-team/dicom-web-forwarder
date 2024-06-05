@@ -16,16 +16,33 @@ Just before the deletion of an instance, the script will try to apply a label to
 ## How to use it ?
 
 - configure Orthanc as usually (through env var or via json)
-- add these mandatory env var:
+
+- add these env var:
   ```
   DESTINATION_URL: "http://orthanc.team:8042/dicom-web"
+  ```
+  and either this (basic auth):
+  ```
   DESTINATION_USER: "demo"
   DESTINATION_PASSWORD: "demo"
   ```
-- add this env var to apply a label to the forwarder studies (on the destination Orthanc)
+  or this (Keycloak setup)
+  ```
+  DESTINATION_API_KEY: "forwarder-api-key"
+  ```
+
+- optional: add this env var to apply a label to the forwarder studies (on the destination Orthanc)
   ```
   DESTINATION_LABEL: "MY-HOSPITAL"
   ```
 - if you want to apply labels on forwarded studies, make sure that the receiving Orthanc is reachable on the dicom-web route (of course) but also on these 2 ones:
   - `/studies/{orthancId}/labels/{label}`
   - `/tools/lookup`
+
+If you use Keycloak and Auth plugin, this should be the case if you give the permissions in the json file as follow:
+```
+"upload-role": {
+  "permissions":["upload", "edit-labels"],
+  "authorized_labels": ["*"]
+}
+``` 

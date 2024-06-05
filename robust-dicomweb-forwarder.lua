@@ -22,10 +22,24 @@ function Initialize()
     userDestination = os.getenv("DESTINATION_USER")
     passwordDestination = os.getenv("DESTINATION_PASSWORD")
     labelToApply = os.getenv("DESTINATION_LABEL")
+
+    apiKey = os.getenv("DESTINATION_API_KEY")
     
     -- configure the dicomweb destination in Orthanc
-    local body = '{"Url":"' .. urlDestination .. '","Username":"' .. userDestination .. '","Password":"' .. passwordDestination .. '"}'
-    RestApiPut("/dicom-web/servers/destination", body, false)
+    local payload = {}
+    payload["Url"] = urlDestination
+
+    if apiKey ~= nil then
+        -- api key case
+        local payload2 = {}
+        payload2["api-key"] = apiKey
+        payload["HttpHeaders"] = payload2
+    else
+        -- user/password case
+        payload["Username"] = userDestination
+        payload["Password"] = passwordDestination
+    end
+    RestApiPut("/dicom-web/servers/destination",  DumpJson(payload, true), false)
 
     -- prepare urlDestination for calls to api
     urlDestination = string.gsub(urlDestination, "/dicom%-web", "")
@@ -47,6 +61,7 @@ urlDestination = ""
 userDestination = ""
 passwordDestination = ""
 labelToApply = ""
+apiKey = ""
 
 labeledStudyInstanceUIDs = {}
 index = 1
@@ -154,7 +169,14 @@ function GetRemoteStudyId(studyInstanceUID)
     -- gets the orthanc study id from the destination Orthanc
     SetHttpCredentials(userDestination, passwordDestination)
     SetHttpTimeout(1)
-    local headers = {["content-type"] = "application/json",}
+
+    local headers = {}
+    if apiKey ~= nil then
+        -- api key case (api-key will take over the user/password if both are provided)
+        headers = {["content-type"] = "application/json", ["api-key"] = apiKey}
+    else
+        headers = {["content-type"] = "application/json",}
+    end
     local response = HttpPost(urlDestination .. "/tools/lookup", studyInstanceUID, headers)
     
     -- print(ParseJson(response)[1]["ID"])
@@ -165,8 +187,15 @@ function ApplyLabel(orthancId, label)
     -- call the API route to apply the label to the study in the distant Orthanc
     SetHttpCredentials(userDestination, passwordDestination)
     SetHttpTimeout(1)
-        
-    HttpPut(urlDestination .. "/studies/" .. orthancId .. "/labels/" .. label, "")
+
+    local headers = {}
+    if apiKey ~= nil then
+        -- api key case (api-key will take over the user/password if both are provided)
+        headers = {["api-key"] = apiKey,}
+    else
+        headers = nil
+    end
+    HttpPut(urlDestination .. "/studies/" .. orthancId .. "/labels/" .. label, "", headers)
 end
 
 function MarkStudyInstanceUIDAsLabeled(studyInstanceUID)

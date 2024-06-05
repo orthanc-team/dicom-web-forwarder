@@ -15,7 +15,7 @@ services:
       VERBOSE_ENABLED: "true"
 
   orthanc-destination:
-    image: orthancteam/orthanc:24.3.4
+    image: orthancteam/orthanc:24.5.1
     ports: ["10043:8042"]
     restart: unless-stopped
     environment:

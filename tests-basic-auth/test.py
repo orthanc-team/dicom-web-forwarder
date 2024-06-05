@@ -9,7 +9,7 @@ import pathlib
 import os
 import logging
 
-from orthanc_tools import OrthancCloner, ClonerMode, OrthancMonitor, OrthancTestDbPopulator, PacsMigrator, OrthancComparator, OrthancForwarder, ForwarderMode, ForwarderDestination
+from orthanc_tools import OrthancTestDbPopulator
 
 here = pathlib.Path(__file__).parent.resolve()
 
@@ -57,7 +57,6 @@ class TestForwarder(unittest.TestCase):
         # let's check the labeling
         for id in b_ids:
             self.assertEqual(self.ob.studies.get_labels(id)[0], label)
-
         self.oa.delete_all_content()
         self.ob.delete_all_content()
 
