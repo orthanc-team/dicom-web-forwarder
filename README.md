@@ -17,6 +17,7 @@ Just before the deletion of an instance, the script will try to apply a label to
 
 - configure Orthanc as usually (through env var or via json)
 
+
 - add these env var:
   ```
   DESTINATION_URL: "http://orthanc.team:8042/dicom-web"
@@ -31,10 +32,17 @@ Just before the deletion of an instance, the script will try to apply a label to
   DESTINATION_API_KEY: "forwarder-api-key"
   ```
 
+  this is also welcome:
+  ```
+  ORTHANC__CONCURRENT_JOBS: 8
+  ```
+
 - optional: add this env var to apply a label to the forwarder studies (on the destination Orthanc)
   ```
   DESTINATION_LABEL: "MY-HOSPITAL"
   ```
+
+
 - if you want to apply labels on forwarded studies, make sure that the receiving Orthanc is reachable on the dicom-web route (of course) but also on these 2 ones:
   - `/studies/{orthancId}/labels/{label}`
   - `/tools/lookup`
