@@ -14,7 +14,7 @@ services:
       VERBOSE_ENABLED: "true"
 
   nginx:
-    image: orthancteam/orthanc-nginx:24.5.1
+    image: orthancteam/orthanc-nginx:26.4.1
     depends_on: [orthanc, orthanc-auth-service, keycloak]
     restart: unless-stopped
     ports: ["80:80"]
@@ -26,7 +26,7 @@ services:
 
   # orthanc-destination
   orthanc:
-    image: orthancteam/orthanc:24.5.1
+    image: orthancteam/orthanc:26.4.2
     restart: unless-stopped
     environment:
       ORTHANC__AUTHENTICATION_ENABLED: "false"
@@ -63,13 +63,14 @@ services:
         }
 
   orthanc-destination-2:
-    image: orthancteam/orthanc:24.5.1
+    image: orthancteam/orthanc:26.4.2
     ports: ["10043:8042"]
     restart: unless-stopped
     environment:
       ORTHANC__AUTHENTICATION_ENABLED: "true"
       ORTHANC__POSTGRESQL__HOST: "orthanc-db"
       ORTHANC__POSTGRESQL__ENABLE_STORAGE: "true"
+      ORTHANC__POSTGRESQL__INDEX_CONNECTIONS_COUNT: 30
       ORTHANC__DATABASE_SERVER_IDENTIFIER: "orthanc2"
       ORTHANC__DICOM_AET: "DESTINATION"
       VERBOSE_ENABLED: "true"
@@ -84,19 +85,19 @@ services:
         }
 
   orthanc-db:
-    image: postgres:14
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_HOST_AUTH_METHOD: "trust"
 
   orthanc-auth-service:
-    image: orthancteam/orthanc-auth-service:24.5.1
+    image: orthancteam/orthanc-auth-service:26.4.1
     depends_on: [keycloak]
     restart: unless-stopped
     environment:
       ENABLE_KEYCLOAK: "true"
       ENABLE_KEYCLOAK_API_KEYS: "true"
-      KEYCLOAK_CLIENT_SECRET: "sVh1itTUBXQ5YMKiYHYDoPcO1l1HbAnU"
+      KEYCLOAK_CLIENT_SECRET: "qGXEggBCcjViMqdip356CtnUNR5270Pl"
       PUBLIC_ORTHANC_ROOT: "http://localhost/orthanc/"
       PUBLIC_LANDING_ROOT: "http://localhost/orthanc/ui/app/token-landing.html"
       PERMISSIONS_FILE_PATH: "/orthanc_auth_service/permissions.json"
@@ -109,7 +110,7 @@ services:
       - ./permissions.json:/orthanc_auth_service/permissions.json
 
   keycloak:
-    image: orthancteam/orthanc-keycloak:24.5.1
+    image: orthancteam/orthanc-keycloak:26.4.1
     depends_on: [keycloak-db]
     restart: unless-stopped
     environment:
@@ -121,7 +122,7 @@ services:
       KC_DB_PASSWORD: "keycloak"
 
   keycloak-db:
-    image: postgres:14
+    image: postgres:18
     restart: unless-stopped
     environment:
       POSTGRES_PASSWORD: "keycloak"
