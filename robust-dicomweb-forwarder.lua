@@ -11,6 +11,8 @@ function ForwardInstance(instanceId)
     payload["Synchronous"] = false
     local job = ParseJson(RestApiPost("/dicom-web/servers/destination/stow", DumpJson(payload, true)))
     print("created job " .. job["ID"] .. " to transfer instance " .. instanceId)
+
+    StoreKeyValue('jobs-ids-store', job["ID"], instanceId)
   
 end
   
@@ -69,8 +71,7 @@ tableSize = 10
 
 function OnStoredInstance(instanceId, tags, metadata)
     -- everytime a new instance is received in Orthanc, forward it
-  
-    ForwardInstance(instanceId)    
+    ForwardInstance(instanceId)
 
 end
   
@@ -107,13 +108,12 @@ function OnJobSuccess(jobId)
   
     print("job " .. jobId .. " succeeded")
   
-    local job = ParseJson(RestApiGet("/jobs/" .. jobId))
-    -- PrintRecursive(job)
+    -- the job ID could be out of the history (default value for JobsHistorySize is 10), especially if there is some parallelization
+    local instanceId = GetKeyValue('jobs-ids-store', jobId)
   
-    if job["Type"] == "DicomWebStowClient" then
-        
-        local instanceId = job["Content"]["Resources"]["Instances"][1]
-  
+    if instanceId ~= nil then
+        print("instanceId " .. instanceId .. " found in kvs")
+          
         if labelToApply ~= "" then
             -- get studyInstanceUID (we do it here because the script should work when it starts with an already filled Orthanc)
             local studyInstanceUID = GetStudyInstanceUID(instanceId)
@@ -134,6 +134,8 @@ function OnJobSuccess(jobId)
 
         -- delete instance once it has been transmitted to target
         RestApiDelete("/instances/" .. instanceId)
+
+        DeleteKeyValue('jobs-ids-store', jobId)
     end
   
 end
