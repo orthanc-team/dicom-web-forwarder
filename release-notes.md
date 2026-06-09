@@ -1,6 +1,11 @@
 Warning: version number should fit with Orthanc docker image version number!
 (so a new version of the forwarder with the same version as Orthanc should be tagged 22.10.1.x)
 
+v 26.4.2.0
+==========
+- upgraded Orthanc docker image to 26.4.2 (actually orthancteam/orthanc-pre-release:2026.06.03)
+- use key-values store in place of JobsHistory to handle deletion of instances after forward
+
 v 26.4.0.0
 ==========
 - upgraded Orthanc docker image to 26.4.0
